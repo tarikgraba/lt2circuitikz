@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import pathlib
+import lt2ti
+
+args_parser = argparse.ArgumentParser(description='Convert LTSPice netlist to a tikz/latex file')
+args_parser.add_argument('-i', '--input', metavar='infile',
+                       type=pathlib.Path, required=True,
+                       help="Input LTSPice netlist")
+args_parser.add_argument('-o', '--output', metavar='outfile',
+                       type=pathlib.Path, required=False,
+                       help="output tex file")
+args_parser.add_argument('-f','--force',
+                       action=argparse.BooleanOptionalAction,
+                       help="Force")
+
+args = args_parser.parse_args()
+
+if not args.input.is_file():
+    print(f'Error: File "{args.i}" does not exist!')
+    sys.exit(-1)
+
+output_file = args.output
+if not output_file:
+    output_file = args.input.with_suffix('.tex')
+    if not args.force:
+        yes = input(f"-> Output will be written to {output_file} ? ").lower()
+
+        if not yes.startswith('y'):
+            print("Aborting")
+            sys.exit(0)
+else:
+    output_file = args.output.with_suffix('.tex')
+
+
+l2tobj = lt2ti.lt2circuiTikz()
+l2tobj.readASCFile(args.input.as_posix())
+l2tobj.writeCircuiTikz(output_file.as_posix())
+
