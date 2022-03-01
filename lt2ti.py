@@ -7,6 +7,49 @@ import copy
 import os
 import configparser
 
+# https://stackoverflow.com/questions/8462449/python-case-insensitive-file-name
+def _path_insensitive(path):
+    """
+    Recursive part of path_insensitive to do the work.
+    """
+
+    if path == '' or os.path.exists(path):
+        return path
+
+    base = os.path.basename(path)  # may be a directory or a file
+    dirname = os.path.dirname(path)
+
+    suffix = ''
+    if not base:  # dir ends with a slash?
+        if len(dirname) < len(path):
+            suffix = path[:len(path) - len(dirname)]
+
+        base = os.path.basename(dirname)
+        dirname = os.path.dirname(dirname)
+
+    if not os.path.exists(dirname):
+        dirname = _path_insensitive(dirname)
+        if not dirname:
+            return
+
+    # at this point, the directory exists but not the file
+
+    try:  # we are expecting dirname to be a directory, but it could be a file
+        files = os.listdir(dirname)
+    except OSError:
+        return
+
+    baselow = base.lower()
+    try:
+        basefinal = next(fl for fl in files if fl.lower() == baselow)
+    except StopIteration:
+        return
+
+    if basefinal:
+        return os.path.join(dirname, basefinal) + suffix
+    else:
+        return
+
 class lt2circuiTikz:
 
     lastASCfile = None
@@ -180,13 +223,15 @@ class lt2circuiTikz:
         relfileandpath_orig = relfileandpath
         relfileandpath = self.translate2ospath(relfileandpath_orig) # localize to OS path, since LTSpice under Wine/Windows always uses \
 
+        asyfileandpath =  _path_insensitive(self.scriptdir+os.sep+ relfileandpath)
+
         print('Loading Symbol file "'+relfileandpath+'" (orig="'+relfileandpath_orig+'")...')
         # read symbol file
         self.symlinecnt = 0
         aSymbol = None
 
         try :
-            fhy = open(self.scriptdir+os.sep+ relfileandpath, mode='r', newline=None)
+            fhy = open(asyfileandpath, mode='r', newline=None)
         except Exception as e:
             print('could not open ASY file "'+relfileandpath+'"  (cwd="'+os.curdir+'", scriptdir="'+self.scriptdir+'", mode='+self.scriptmode+', fullpath="'+self.scriptdir+os.sep+ relfileandpath+'")')
             return None
@@ -255,7 +300,7 @@ class lt2circuiTikz:
         relfileandpath_orig = relfileandpath
         relfileandpath = self.translate2ospath(relfileandpath_orig)
 
-        asy2texfileandpath = self.scriptdir+os.sep+ relfileandpath
+        asy2texfileandpath =  _path_insensitive(self.scriptdir+os.sep+ relfileandpath)
         try :
             fht = open(asy2texfileandpath, mode='r', newline=None)
         except Exception as e:
