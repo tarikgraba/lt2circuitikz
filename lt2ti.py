@@ -1471,6 +1471,12 @@ class SchObject:
         res = getattr(self, attr)
         return str(res)
 
+    def _mergeAttrStrToAttr(self, match):
+        try:
+            return self._attrStrToAttr(match)
+        except Exception as e:
+            print("Could not match attr.id="+match.group(1)+" to an attribute using merged lookup.")
+
     def _symAttrStrToAttr(self, match):
         attr = match.group(1)
         res = getattr(self.symbol, attr)
@@ -1664,6 +1670,24 @@ class Component(SchObject):
         return res
 
 
+    def _mergeAttrStrToAttr(self, match):
+        m = match.group(1)
+        for attr in (self.attrlist):
+            if (attr.kind == m) or (str.lower(attr.kind) == str.lower(m)):
+                return attr.value
+        av = self.symbol.attributes.get(m, "")
+        if (av != ""):
+            return av
+        av = self.symbol.attributes.get(str.lower(m), "")
+        if (av != ""):
+            return av
+        for attrn,av in self.symbol.attributes.items():
+            if (attrn == m) or (str.lower(attrn) == str.lower(m)):
+                return av
+        return super()._mergeAttrStrToAttr(self, match)
+        return "?"+match+"?"
+
+
     def _pinIsJunction(self, match):
         pinname = match.group(1)
 
@@ -1758,6 +1782,8 @@ class Component(SchObject):
         line = re.sub('#self.symbol.conversionKV.([A-Za-z0-9_\-!]+)#',self._symcKVAttrStrToAttr, line)
 
         line = re.sub('#self.symbol.([A-Za-z0-9_\-!]+)#',self._symAttrStrToAttr, line)
+
+        line = re.sub('#self.mergedattrib.([A-Za-z0-9_\-!]+)#',self._mergeAttrStrToAttr, line)
 
         line = re.sub('#self.config.([A-Za-z0-9_\-!]+)#',self._confAttrStrToAttr, line)
 
